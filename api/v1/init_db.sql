@@ -1,3 +1,11 @@
+CREATE DATABASE freaksparty;
+
+CREATE USER mi_usuario;
+SET PASSWORD FOR 'rgeo2'@'localhost' = 'some_pass';
+
+GRANT ALL PRIVILEGES ON freaksparty.* TO 'mi_usuario'@'localhost';
+FLUSH PRIVILEGES;
+
 USE freaksparty;
 
 CREATE TABLE events(
@@ -56,7 +64,7 @@ CREATE TABLE news(
     title VARCHAR(150) NOT NULL,
     subtitle VARCHAR(300) NOT NULL,
     body VARCHAR(5000) NOT NULL,
-    date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id, category)
 )  ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

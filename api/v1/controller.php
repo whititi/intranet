@@ -13,14 +13,14 @@
         }
     }
 
-    if(end($array)>0) {
+    if( count($array) > 3 ) {
         $id = $array[count($array)];
         $entity = $array[count($array) - 1];
     } else {
         $entity = $array[count($array)];
     }
 
-    $obj = new generic_class;
+    $obj = new model;
     $obj->entity = $entity;
 
     switch ($_SERVER['REQUEST_METHOD']) {
@@ -31,7 +31,7 @@
                 $data = $obj->get();
             }
    
-            array_pop($data); //ELIMINA LA INFORMACIÓN ADICIONAL
+            //array_pop($data);
 
             if(count($data)==0) {
                 if(isset($id)) {
@@ -44,13 +44,19 @@
             }
         break;
         case 'POST':
-            if(!isset($id)) {
-                $array = json_decode($request, true);
-                $obj->data = renderizeData(
-                    array_keys($array), 
-                    array_values($array)
-                );
-
+            $obj->data=$_POST;
+            if(isset($id)) {
+                $data = $obj->post($id);
+                if(count($data)==0) {
+                    if(isset($id)) {
+                        print_json(404, "Not Found", null);
+                    } else {
+                        print_json(204, "Not Content", null);
+                    }
+                } else {
+                    print_json(200, "OK", $data);
+                }
+            } else {
                 $data = $obj->post();
                 if($data) {
                     if($obj->conn->lastInsertId() != 0) {
@@ -67,32 +73,25 @@
                 } else {
                     print_json(201, false, null);
                 }
-            } else {
-                print_json(405, "Method Not Allowed", null);
             }
         break;
         case 'PUT':
             if(isset($id)) {
                 $info = $obj->get($id);
-                array_pop($info);
                 if(count($info)!=0) {
-                    $array = json_decode($request, true);
-                    $obj->data = renderizeData(array_keys($array), array_values($array));
-                    $obj->Id = $id;
-                    $data = $obj->put();
+                    $obj->data = getPutInfo($request);
+                    $data = $obj->put($id);
                     if($data) {
-                        $data = $obj->get($id);
                         if(count($data)==0) {
                             print_json(200, false, null);
                         } else {
-                            array_pop($data);
                             print_json(200, "OK", $data);
                         }
                     } else {
                         print_json(200, false, null);
                     }
                 } else {
-                    print_json(404, "Not Found", null);
+                    print_json(404, "Not Found", $info);
                 }
             } else {
                 print_json(405, "Method Not Allowed", null);
@@ -101,21 +100,19 @@
         case 'DELETE':
             if(isset($id)) {
                 $info = $obj->get($id);
-                if(count($info)==0) {
-                    print_json(404, "Not Found", null);
-                } else {
-                    $obj->Id = $id;
-                    $data = $obj->delete();
+                if(count($info)!=0) {
+                    $data = $obj->delete($id);
                     if($data) {
-                        array_pop($info);
-                        if(count($info)==0) {
-                            print_json(404, "Not Found", null);
+                        if(count($data)==0) {
+                            print_json(200, false, null);
                         } else {
-                            print_json(200, "OK", $info);
+                            print_json(200, "OK", $data);
                         }
                     } else {
                         print_json(200, false, null);
                     }
+                } else {
+                    print_json(404, "Not Found", $info);
                 }
             } else {
                 print_json(405, "Method Not Allowed", null);
@@ -126,40 +123,18 @@
         break;
     }
     
-    function renderizeData($keys, $values) {
-        switch ($_SERVER['REQUEST_METHOD']) {
-            case 'POST':
-                foreach ($keys as $key => $value) {
-                    if($key == count($keys) - 1) {
-                        $str = $str . $value . ") VALUES (";
-                        foreach ($values as $key => $value) {
-                            if($key == count($values) - 1) {
-                                $str = $str . "'" . $value . "')";
-                            } else {
-                                $str = $str . "'" . $value . "',";
-                            }
-                        }
-                    } else {
-                        if($key == 0) {
-                            $str = $str . "(" . $value . ",";
-                        } else {
-                            $str = $str . $value . ",";
-                        }
-                    }
-                }
-                return $str;
-            break;
-            case 'PUT':
-                foreach ($keys as $key => $value) {
-                    if($key == count($keys) - 1) {
-                        $str = $str . $value . "='" . $values[$key] . "'"; 
-                    } else {
-                        $str = $str . $value . "='" . $values[$key] . "',"; 
-                    }
-                }
-                return $str;
-            break;
+    function getPutInfo($values){
+        $info=array();
+        $data=array();
+        $first=explode("name=", $values);
+        unset($first[0]);
+        foreach($first as $value){
+            $info[]=explode("\r\n", $value);
+            $title=filter_var ( $info[0][0], FILTER_SANITIZE_EMAIL);
+            $data[$title]=$info[0][2];
         }
+
+        return $data;
     }
 
     function print_json($status, $mensaje, $data) {

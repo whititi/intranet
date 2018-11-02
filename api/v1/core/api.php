@@ -2,7 +2,7 @@
     interface api{
         public function get();
         public function post();
-        public function put();
-        public function delete();
+        public function put($id);
+        public function delete($id);
     }
 ?>
